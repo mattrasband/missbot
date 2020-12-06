@@ -1,0 +1,4 @@
+.envrc
+.git/
+.tox/
+.venv/
