@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, get_type_hints
 
 from aiohttp import ClientSession
 
+from .configutil import load_secret
 from .types import BotToken, SlashEvent, Redis
 
 logger = logging.getLogger(__name__)
@@ -123,9 +124,14 @@ async def handle_message_2(event):
     print("handle 2")
 
 
+@registry.on_slash("/chart")
+async def on_slash_chart(command: SlashEvent, client_session: ClientSession):
+    pass
+
+
 @registry.on_slash("/quote")
 async def on_slash_quote(command: SlashEvent, client_session: ClientSession):
-    if (td_client_id := os.getenv("TD_CLIENT_ID")) :
+    if (td_client_id := load_secret("td_client_id")) :
         symbols = []
         for match in re.finditer(r"\b(?P<symbol>[A-z]{1,6})\b", command["text"]):
             symbols.append(match.group("symbol"))
@@ -141,24 +147,24 @@ async def on_slash_quote(command: SlashEvent, client_session: ClientSession):
                 "response_type": "in_channel",
                 # "text":
                 "blocks": [
-                    #  {
-                    #      "type": "section",
-                    #      "text": {
-                    #          "type": "mrkdwn",
-                    #          "text": "A message *with some bold text* and _some italicized text_."
-                    #      }
-                    #  },
-                    #  {
-                    #      "type": "section",
-                    #      "text": {
-                    #          "type": "mrkdwn",
-                    #          "text": "A message *with some bold text* and _some italicized text_."
-                    #      }
-                    #  }
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "A message *with some bold text* and _some italicized text_."
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "A message *with some bold text* and _some italicized text_."
+                        }
+                    }
                 ],
             }
 
-            for symbol, quote in quotes:
+            for symbol, quote in quotes.items():
                 pass
 
             async with client_session.post(command["response_url"], json=block) as r:

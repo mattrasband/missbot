@@ -11,6 +11,7 @@ from aiohttp_remotes import (
 )
 
 from .auth import auth_factory
+from .configutil import load_secret
 from .contexts import (
     client_session_ctx,
     redis_ctx_factory,
@@ -35,8 +36,8 @@ async def app_factory() -> web.Application:
     # TODO: command (and links) to generate required permissions
     app.update(
         {
-            "SLACK_CLIENT_ID": _load_secret("slack_client_id"),
-            "SLACK_CLIENT_SECRET": _load_secret("slack_client_secret"),
+            "SLACK_CLIENT_ID": load_secret("slack_client_id"),
+            "SLACK_CLIENT_SECRET": load_secret("slack_client_secret"),
             # TODO: in config, generate set of required user scopes...
             "SLACK_USER_SCOPES": [],
             # TODO: in config, generate set of required slack bot scopes...
@@ -66,27 +67,14 @@ async def app_factory() -> web.Application:
     app.cleanup_ctx.extend(
         [
             client_session_ctx,
-            redis_ctx_factory(_load_secret("REDIS_URL")),
+            redis_ctx_factory(load_secret("redis_url")),
         ]
     )
 
     app.add_subapp("/auth/", await auth_factory())
     app.add_subapp(
         "/slack/",
-        await slack_factory(_load_secret("slack_signing_secret"), registry=registry),
+        await slack_factory(load_secret("slack_signing_secret"), registry=registry),
     )
 
     return app
-
-
-def _load_secret(name):
-    """load a secret first attempting the environment then falling back to
-    the runtime secrets path at /run/secrets/name.lower()"""
-    if (v := os.getenv(name.upper())) :
-        return v
-
-    path = f"/run/secrets/{name.lower()}"
-    if os.path.exists(path):
-        with open(path) as f:
-            return f.read().strip()
-    raise SystemExit(f"Unable to load secret from env as {name.upper()} or /run/secrets/{name}")
