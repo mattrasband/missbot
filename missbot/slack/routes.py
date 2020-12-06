@@ -1,7 +1,9 @@
 import asyncio
 import logging
 
-from aiohttp import web
+from aiohttp import ClientSession, web
+
+from missbot.types import BotToken, Redis, SlashEvent
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,16 @@ async def on_slack_command(req: web.Request) -> web.Response:
     # response_url, trigger_id
     body = await req.post()
     logger.debug("received command: %s", body)
-    result = await req.app["registry"].exec_command(body)
-    if result is None:
-        return web.Response()
-    return web.json_response(result)
+    bot_token = await req.config_dict["redis"].hmget(body["team_id"], "token", encoding="utf-8")
+    result = await req.app["registry"].exec_slash(
+        body,
+        {
+            BotToken: bot_token[0] if bot_token else None,
+            Redis: req.config_dict["redis"],
+            SlashEvent: body,
+            ClientSession: req.config_dict["client_session"],
+        },
+    )
+    if result:
+        return web.json_response(result)
+    return web.Response()

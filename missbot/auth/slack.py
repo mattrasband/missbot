@@ -85,7 +85,9 @@ async def slack_callback(req: web.Request) -> web.Response:
             # scope, token_type, access_token, bot_user_id, team: { id, name },
             # enterprise: ?
             at = await r.json()
-            print("access_token:", at)
+            if at["ok"]:
+                # TODO: move to helper funcs
+                await req.config_dict["redis"].hmset(at["team"]["id"], "token", at["access_token"])
         # TODO: render template that redirects so the user knows what's up.
         raise web.HTTPFound(
             location=URL.build(
