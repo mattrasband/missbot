@@ -1,5 +1,16 @@
 import aioredis
 from aiohttp import ClientSession, web
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+
+async def apscheduler_ctx(app: web.Application):
+    scheduler = AsyncIOScheduler()
+    app["scheduler"] = scheduler
+    scheduler.start()
+    try:
+        yield
+    finally:
+        scheduler.shutdown()
 
 
 async def client_session_ctx(app: web.Application):

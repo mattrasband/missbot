@@ -13,8 +13,9 @@ routes = web.RouteTableDef()
 @routes.post("/events", name="on_slack_event")
 async def on_slack_event(req: web.Request):
     """handle all events from the slack event hook api"""
+    logger.debug("raw event: %s", await req.text())
+
     body = await req.json()
-    logger.debug("received event: %s", body)
     if (evt_type := body.get("type")) :
         if evt_type == "url_verification":
             return web.json_response({"challenge": body["challenge"]})

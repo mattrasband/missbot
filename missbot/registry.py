@@ -13,7 +13,7 @@ from .types import BotToken, SlashEvent, Redis
 logger = logging.getLogger(__name__)
 
 
-class Registry:
+class _Registry:
     __slots__ = (
         "event_handlers",
         "slash_handlers",
@@ -26,12 +26,12 @@ class Registry:
     async def exec_slash(self, command, providers: Dict[Any, Any]):
         if (handler := self.slash_handlers.get(command["command"])) :
             types = get_type_hints(handler, include_extras=True)
-            logger.debug(
-                "handler %s expects types %s, available types: %s",
-                handler.__name__,
-                types,
-                providers,
-            )
+            #  logger.debug(
+            #      "handler %s expects types %s, available types: %s",
+            #      handler.__name__,
+            #      types,
+            #      providers,
+            #  )
             kwargs = {}
             for param, type_ in types.items():
                 if (t := providers.get(type_)) :
@@ -48,6 +48,7 @@ class Registry:
             name = "/" + name
 
         def wrapper(f):
+            logger.debug("registering %s for %s", f.__name__, name)
             if not asyncio.iscoroutinefunction(f):
                 raise ValueError(f"{f.__name__} is not a coroutine")
             if (h := self.slash_handlers.get(name)) :
@@ -79,6 +80,8 @@ class Registry:
             raise ValueError("cannot have both a regex and test func")
 
         def wrapper(f):
+            logger.debug("add event handler %s for %s", f.__name__, name)
+
             if not asyncio.iscoroutinefunction(f):
                 raise ValueError(f"{f.__name__} is not a coroutine")
 
@@ -106,7 +109,7 @@ class Registry:
         return self.on_event("message")(f)
 
 
-registry = Registry()
+registry = _Registry()
 
 
 @registry.on_event("message", regex=re.compile(r"\bhi\b"))
@@ -122,61 +125,3 @@ async def on_app_mention(event):
 @registry.on_message
 async def handle_message_2(event):
     print("handle 2")
-
-
-@registry.on_slash("/chart")
-async def on_slash_chart(command: SlashEvent, client_session: ClientSession):
-    pass
-
-
-@registry.on_slash("/quote")
-async def on_slash_quote(command: SlashEvent, client_session: ClientSession):
-    if (td_client_id := load_secret("td_client_id")) :
-        symbols = []
-        for match in re.finditer(r"\b(?P<symbol>[A-z]{1,6})\b", command["text"]):
-            symbols.append(match.group("symbol"))
-
-        if symbols:
-            async with client_session.get(
-                f"https://api.tdameritrade.com/v1/marketdata/quotes",
-                params={"apikey": td_client_id, "symbol": ",".join(symbols)},
-            ) as r:
-                quotes = await r.json()
-
-            block = {
-                "response_type": "in_channel",
-                # "text":
-                "blocks": [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "A message *with some bold text* and _some italicized text_."
-                        }
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "A message *with some bold text* and _some italicized text_."
-                        }
-                    }
-                ],
-            }
-
-            for symbol, quote in quotes.items():
-                pass
-
-            async with client_session.post(command["response_url"], json=block) as r:
-                await r.text()
-
-        else:
-            return {
-                "response_type": "ephemeral",
-                "text": f"Sorry, I couldn't find any symbols in the command.",
-            }
-    else:
-        return {
-            "response_type": "ephemeral",
-            "text": "Sorry, this slash command is misconfigured. Please alert the developer!",
-        }

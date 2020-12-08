@@ -1,4 +1,5 @@
 import argparse
+import importlib
 import logging
 import os
 
@@ -13,6 +14,7 @@ from aiohttp_remotes import (
 from .auth import auth_factory
 from .configutil import load_secret
 from .contexts import (
+    apscheduler_ctx,
     client_session_ctx,
     redis_ctx_factory,
 )
@@ -66,6 +68,7 @@ async def app_factory() -> web.Application:
 
     app.cleanup_ctx.extend(
         [
+            apscheduler_ctx,
             client_session_ctx,
             redis_ctx_factory(load_secret("redis_url")),
         ]
@@ -76,5 +79,9 @@ async def app_factory() -> web.Application:
         "/slack/",
         await slack_factory(load_secret("slack_signing_secret"), registry=registry),
     )
+
+    # load all the plugin modules so they register as handlers
+    for pkg in ["missbot.contrib.stocks"]:
+        importlib.import_module(pkg)
 
     return app

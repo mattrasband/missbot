@@ -12,3 +12,4 @@ pycparser==2.20
 typing-extensions==3.7.4.3
 uvloop==0.14.0
 yarl==1.6.3
+APScheduler==3.6.3
