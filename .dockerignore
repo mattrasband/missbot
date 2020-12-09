@@ -2,3 +2,5 @@
 .git/
 .tox/
 .venv/
+Dockerfile
+secrets/

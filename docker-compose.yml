@@ -1,0 +1,50 @@
+version: "3.7"
+
+services:
+  bot: &bot
+    image: mattrasband/missbot
+    container_name: missbot
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    depends_on:
+      - redis
+    ports:
+      - 8080:8080
+    environment: &env
+      REDIS_URL: redis://redis
+      PYTHONUNBUFFERED: "1"
+      REQUIRE_SSL: "true"
+    secrets:
+      - slack_client_id
+      - slack_client_secret
+      - slack_signing_secret
+      - td_client_id
+    volumes:
+      - .:/app
+
+  tests:
+    <<: *bot
+    container_name: missbot_test
+    ports: []
+    environment:
+      <<: *env
+      REQUIRE_SSL: "false"
+    command: |
+      sh -c "python -m pip install -U watchdog[watchmedo] && \
+             watchmedo shell-command --patterns='*.py' --recursive --command='python3 -m pytest test/'"
+
+  redis:
+    image: redis:6-alpine
+
+secrets:
+  slack_client_id:
+    file: secrets/slack_client_id.txt
+  slack_client_secret:
+    file: secrets/slack_client_secret.txt
+  slack_signing_secret:
+    file: secrets/slack_signing_secret.txt
+  td_client_id:
+    file: secrets/td_client_id.txt
+

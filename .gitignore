@@ -3,3 +3,6 @@
 .envrc
 **/__pycache__/
 .pytest_cache
+
+# docker secrets
+secrets/
