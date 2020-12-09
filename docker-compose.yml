@@ -31,9 +31,7 @@ services:
     environment:
       <<: *env
       REQUIRE_SSL: "false"
-    command: |
-      sh -c "python -m pip install -U watchdog[watchmedo] && \
-             watchmedo shell-command --patterns='*.py' --recursive --command='python3 -m pytest test/'"
+    command: sh -c "watchmedo shell-command --patterns='*.py' --recursive --command='python3 -m pytest test/'"
 
   redis:
     image: redis:6-alpine
